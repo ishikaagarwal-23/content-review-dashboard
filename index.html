@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Content Review — Man Matters</title>
+<style>
+  :root{
+    --bg:#F6F7F4;
+    --surface:#FFFFFF;
+    --ink:#16213E;
+    --muted:#6B7280;
+    --line:#E4E6E1;
+    --accent:#2F6F5E;
+    --accent-soft:#E4EFEA;
+    --amber:#B8860B;
+    --amber-soft:#FBF2DE;
+    --blue:#3B6FA0;
+    --blue-soft:#E7EEF5;
+    --slate:#8B8D98;
+    --slate-soft:#EEEEF0;
+    --rust:#B0472E;
+    --rust-soft:#F7E7E3;
+    --radius:10px;
+    --shadow:0 1px 2px rgba(22,33,62,0.06), 0 4px 14px rgba(22,33,62,0.05);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1040px;margin:0 auto;padding:28px 20px 80px;}
+
+  /* header */
+  .eyebrow{
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);
+    font-weight:700;margin:0 0 6px;
+  }
+  .titlebar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px;}
+  h1{
+    font-family:Georgia,"Times New Roman",serif;
+    font-size:28px;font-weight:600;margin:0;letter-spacing:-.01em;
+  }
+  .role-switch{
+    display:flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;box-shadow:var(--shadow);
+  }
+  .role-switch button{
+    border:none;background:transparent;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:600;
+    color:var(--muted);cursor:pointer;transition:.15s;
+  }
+  .role-switch button.active{background:var(--ink);color:#fff;}
+
+  /* stage rail */
+  .rail{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:26px;}
+  .rail-stage{flex:1;padding:14px 16px;border-right:1px solid var(--line);position:relative;}
+  .rail-stage:last-child{border-right:none;}
+  .rail-count{font-size:22px;font-weight:700;line-height:1;}
+  .rail-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;}
+  .rail-stage.dot-submitted .rail-count{color:var(--slate);}
+  .rail-stage.dot-revision .rail-count{color:var(--amber);}
+  .rail-stage.dot-resubmitted .rail-count{color:var(--blue);}
+  .rail-stage.dot-approved .rail-count{color:var(--accent);}
+
+  /* toolbar */
+  .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;}
+  .filters{display:flex;gap:6px;flex-wrap:wrap;}
+  .filters button{
+    border:1px solid var(--line);background:var(--surface);color:var(--muted);font-size:12.5px;font-weight:600;
+    padding:6px 12px;border-radius:999px;cursor:pointer;
+  }
+  .filters button.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .btn-primary{
+    background:var(--accent);color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13.5px;font-weight:700;cursor:pointer;
+  }
+  .btn-primary:hover{filter:brightness(1.06);}
+  .btn-ghost{
+    background:transparent;border:1px solid var(--line);color:var(--ink);padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;
+  }
+
+  /* cards */
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:16px 18px;margin-bottom:12px;cursor:pointer;
+  }
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;}
+  .card-title{font-weight:700;font-size:15.5px;margin:0 0 3px;}
+  .card-meta{font-size:12.5px;color:var(--muted);}
+  .badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;white-space:nowrap;}
+  .badge-submitted{background:var(--slate-soft);color:var(--slate);}
+  .badge-revision{background:var(--amber-soft);color:var(--amber);}
+  .badge-resubmitted{background:var(--blue-soft);color:var(--blue);}
+  .badge-approved{background:var(--accent-soft);color:var(--accent);}
+  .card-feedback{margin-top:10px;font-size:13px;color:var(--ink);background:var(--amber-soft);border-left:3px solid var(--amber);padding:8px 10px;border-radius:4px;}
+  .delete-btn{background:transparent;border:1px solid var(--line);border-radius:6px;font-size:13px;padding:4px 8px;cursor:pointer;color:var(--muted);line-height:1;}
+  .delete-btn:hover{border-color:var(--rust);color:var(--rust);background:var(--rust-soft);}
+  .empty{text-align:center;padding:50px 20px;color:var(--muted);}
+  .empty b{color:var(--ink);}
+
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(22,33,62,0.35);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;z-index:50;}
+  .overlay.open{display:flex;}
+  .modal{background:var(--surface);border-radius:14px;max-width:560px;width:100%;padding:24px 26px 22px;box-shadow:0 20px 60px rgba(22,33,62,0.25);}
+  .modal h2{font-family:Georgia,serif;font-size:20px;margin:0 0 4px;}
+  .modal .sub{font-size:13px;color:var(--muted);margin-bottom:18px;}
+  label{display:block;font-size:12.5px;font-weight:700;color:var(--ink);margin:14px 0 6px;}
+  label:first-of-type{margin-top:0;}
+  input[type=text],select,textarea{
+    width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13.5px;font-family:inherit;background:#FCFCFB;
+  }
+  textarea{resize:vertical;min-height:70px;}
+  .radio-row{display:flex;gap:8px;}
+  .radio-opt{flex:1;border:1.5px solid var(--line);border-radius:8px;padding:10px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted);}
+  .radio-opt.sel-approve.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);}
+  .radio-opt.sel-revise.on{border-color:var(--amber);background:var(--amber-soft);color:var(--amber);}
+  .radio-opt.sel-email.on{border-color:var(--blue);background:var(--blue-soft);color:var(--blue);}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px;}
+  .version-log{margin-top:16px;border-top:1px solid var(--line);padding-top:14px;}
+  .version-item{font-size:12.5px;color:var(--muted);padding:6px 0;border-bottom:1px dashed var(--line);}
+  .version-item b{color:var(--ink);}
+  .copy-box{background:var(--slate-soft);border-radius:8px;padding:12px 14px;font-size:13px;margin-top:14px;white-space:pre-wrap;}
+  .toast{
+    position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
+    padding:10px 18px;border-radius:8px;font-size:13px;box-shadow:var(--shadow);opacity:0;transition:.25s;pointer-events:none;z-index:80;
+  }
+  .toast.show{opacity:1;}
+  .loading{text-align:center;padding:60px;color:var(--muted);font-size:13.5px;}
+  .content-preview{background:#FCFCFB;border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:13.5px;margin-top:8px;white-space:pre-wrap;}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="loading">Loading board…</div>
+</div>
+
+<div class="overlay" id="overlay"><div class="modal" id="modalBody"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const STAGES = {
+  submitted: {label:"Submitted", badge:"badge-submitted", dot:"dot-submitted"},
+  revision: {label:"Revision Requested", badge:"badge-revision", dot:"dot-revision"},
+  resubmitted: {label:"Resubmitted", badge:"badge-resubmitted", dot:"dot-resubmitted"},
+  approved: {label:"Approved", badge:"badge-approved", dot:"dot-approved"},
+};
+const BOARD_KEY = "review-board";
+const SETTINGS_KEY = "review-settings";
+let role = "reviewer"; // "reviewer" (Ishika) or "agency"
+let board = [];
+let settings = { contactType: "individual", agencyPhone: "", groupName: "", agencyEmail: "", reviewerEmail: "", dashboardUrl: "" };
+let activeFilter = "all";
+
+function cleanPhone(raw){
+  return (raw || "").replace(/[^0-9]/g, "");
+}
+
+async function loadSettings(){
+  try{
+    const res = await window.storage.get(SETTINGS_KEY, true);
+    settings = res && res.value ? JSON.parse(res.value) : { contactType: "individual", agencyPhone: "", groupName: "", agencyEmail: "", reviewerEmail: "", dashboardUrl: "" };
+  }catch(e){
+    settings = { contactType: "individual", agencyPhone: "", groupName: "", agencyEmail: "", reviewerEmail: "", dashboardUrl: "" };
+  }
+}
+
+async function saveSettings(){
+  try{
+    await window.storage.set(SETTINGS_KEY, JSON.stringify(settings), true);
+  }catch(e){
+    toast("Couldn't save settings: " + e.message);
+  }
+}
+
+function openSettingsModal(){
+  const t = settings.contactType;
+  openOverlay(`
+    <h2>Agency contact method</h2>
+    <p class="sub">Where review messages should go.</p>
+    <label>Method</label>
+    <div class="radio-row">
+      <div class="radio-opt sel-approve ${t==='individual'?'on':''}" id="opt-individual" onclick="setContactType('individual')">WhatsApp (number)</div>
+      <div class="radio-opt sel-revise ${t==='group'?'on':''}" id="opt-group" onclick="setContactType('group')">WhatsApp (group)</div>
+      <div class="radio-opt sel-email ${t==='email'?'on':''}" id="opt-email" onclick="setContactType('email')">Email</div>
+    </div>
+    <div id="contact-fields">${contactFieldsHTML()}</div>
+    <p class="sub" id="contact-helper" style="margin-top:12px;">${contactHelperText()}</p>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeOverlay()">Cancel</button>
+      <button class="btn-primary" onclick="saveAgencyContact()">Save</button>
+    </div>
+  `);
+}
+
+function contactFieldsHTML(){
+  if(settings.contactType === 'group'){
+    return `<label>Group name</label><input type="text" id="f-groupname" placeholder="e.g. Man Matters x [Agency] Reviews" value="${escapeHtml(settings.groupName)}">`;
+  }
+  if(settings.contactType === 'email'){
+    return `<label>Agency email</label><input type="text" id="f-email" placeholder="e.g. team@agency.com" value="${escapeHtml(settings.agencyEmail)}">`;
+  }
+  return `<label>Phone number</label><input type="text" id="f-phone" placeholder="e.g. +91 98765 43210" value="${escapeHtml(settings.agencyPhone)}">`;
+}
+
+function contactHelperText(){
+  if(settings.contactType === 'group') return "WhatsApp does not support a link that opens a specific group with text pre-filled, so for groups you copy the message and paste it in yourself.";
+  if(settings.contactType === 'email') return 'The "Open in Gmail" button opens Gmail\'s web compose window in your browser — addressed and pre-filled — you just hit send.';
+  return 'This lets the "Send via WhatsApp" button open a chat with the message pre-filled.';
+}
+
+function setContactType(type){
+  settings.contactType = type;
+  document.getElementById('opt-individual').classList.toggle('on', type==='individual');
+  document.getElementById('opt-group').classList.toggle('on', type==='group');
+  document.getElementById('opt-email').classList.toggle('on', type==='email');
+  document.getElementById('contact-fields').innerHTML = contactFieldsHTML();
+  document.getElementById('contact-helper').textContent = contactHelperText();
+}
+async function saveAgencyContact(){
+  if(settings.contactType === 'group'){
+    settings.groupName = document.getElementById('f-groupname').value.trim();
+  } else if(settings.contactType === 'email'){
+    settings.agencyEmail = document.getElementById('f-email').value.trim();
+  } else {
+    settings.agencyPhone = document.getElementById('f-phone').value.trim();
+  }
+  await saveSettings();
+  closeOverlay();
+  toast("Saved");
+}
+
+function openReviewerSettingsModal(){
+  openOverlay(`
+    <h2>Reviewer notify settings</h2>
+    <p class="sub">Used when the agency sends you a "please review" email after submitting.</p>
+    <label>Your email</label>
+    <input type="text" id="f-revemail" placeholder="e.g. ishika@manmatters.com" value="${escapeHtml(settings.reviewerEmail)}">
+    <label>Dashboard link</label>
+    <input type="text" id="f-dashurl" placeholder="Paste this dashboard's shared link" value="${escapeHtml(settings.dashboardUrl)}">
+    <p class="sub" style="margin-top:10px;">Opening this link always lands on Reviewer view by default, so the agency's email takes you straight into review mode.</p>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeOverlay()">Cancel</button>
+      <button class="btn-primary" onclick="saveReviewerSettings()">Save</button>
+    </div>
+  `);
+}
+
+async function saveReviewerSettings(){
+  settings.reviewerEmail = document.getElementById('f-revemail').value.trim();
+  settings.dashboardUrl = document.getElementById('f-dashurl').value.trim();
+  await saveSettings();
+  closeOverlay();
+  toast("Saved");
+}
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+async function loadBoard(){
+  try{
+    const res = await window.storage.get(BOARD_KEY, true);
+    board = res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){
+    board = [];
+  }
+}
+
+async function saveBoard(){
+  try{
+    const result = await window.storage.set(BOARD_KEY, JSON.stringify(board), true);
+    if(!result) toast("Couldn't save — try again");
+  }catch(e){
+    toast("Save failed: " + e.message);
+  }
+}
+
+function fmtDate(iso){
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) + ' · ' + d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+}
+
+function fmtDateOnly(dateStr){
+  if(!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+}
+
+function counts(){
+  const c = {submitted:0, revision:0, resubmitted:0, approved:0};
+  board.forEach(i => { if(c[i.status] !== undefined) c[i.status]++; });
+  return c;
+}
+
+function render(){
+  const app = document.getElementById('app');
+  const c = counts();
+  const filters = role === 'reviewer'
+    ? [['all','All'],['submitted','Needs Review'],['resubmitted','Resubmitted'],['approved','Approved']]
+    : [['all','All'],['revision','Needs Your Revision'],['submitted','In Review'],['approved','Approved']];
+
+  let list = board.slice().sort((a,b)=> new Date(b.updatedAt)-new Date(a.updatedAt));
+  if(activeFilter !== 'all') list = list.filter(i => i.status === activeFilter);
+
+  app.innerHTML = `
+    <p class="eyebrow">Man Matters × Agency</p>
+    <div class="titlebar">
+      <h1>Content Review Pipeline</h1>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="btn-ghost" onclick="openSettingsModal()" style="padding:7px 14px;font-size:12.5px;">Agency contact</button>
+        ${role==='reviewer' ? `<button class="btn-ghost" onclick="openReviewerSettingsModal()" style="padding:7px 14px;font-size:12.5px;">Notify settings</button>` : ''}
+        <div class="role-switch">
+          <button onclick="setRole('agency')" class="${role==='agency'?'active':''}">Agency view</button>
+          <button onclick="setRole('reviewer')" class="${role==='reviewer'?'active':''}">Reviewer view</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="rail">
+      <div class="rail-stage dot-submitted"><div class="rail-count">${c.submitted}</div><div class="rail-label">Submitted</div></div>
+      <div class="rail-stage dot-revision"><div class="rail-count">${c.revision}</div><div class="rail-label">Revision Requested</div></div>
+      <div class="rail-stage dot-resubmitted"><div class="rail-count">${c.resubmitted}</div><div class="rail-label">Resubmitted</div></div>
+      <div class="rail-stage dot-approved"><div class="rail-count">${c.approved}</div><div class="rail-label">Approved</div></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="filters">
+        ${filters.map(([key,label]) => `<button class="${activeFilter===key?'active':''}" onclick="setFilter('${key}')">${label}</button>`).join('')}
+      </div>
+      ${role==='agency' ? `<button class="btn-primary" onclick="openSubmitModal()">+ Submit content</button>` : ''}
+    </div>
+
+    <div id="list">
+      ${list.length === 0 ? `<div class="empty">Nothing here yet.<br><b>${role==='agency' ? 'Submit a piece to get it into review.' : 'Waiting on the agency to submit something.'}</b></div>` : list.map(cardHTML).join('')}
+    </div>
+  `;
+}
+
+function cardHTML(item){
+  const s = STAGES[item.status];
+  const lastFeedback = item.feedback[item.feedback.length-1];
+  const showFeedback = item.status === 'revision' && lastFeedback;
+  const liveDateNote = item.tentativeLiveDate ? ` · live ${fmtDateOnly(item.tentativeLiveDate)}` : '';
+  const liveLinkRow = item.liveLink
+    ? `<div class="card-feedback" style="background:var(--accent-soft);border-left-color:var(--accent);"><b>Live:</b> <a href="${escapeHtml(item.liveLink)}" target="_blank" onclick="event.stopPropagation();" style="color:var(--accent);">${escapeHtml(item.liveLink)}</a></div>`
+    : '';
+  return `
+    <div class="card" onclick="openDetail('${item.id}')">
+      <div class="card-top">
+        <div>
+          <p class="card-title">${escapeHtml(item.title)}</p>
+          <p class="card-meta">${escapeHtml(item.type)} · ${escapeHtml(item.campaign)} · v${item.versions.length} · updated ${fmtDate(item.updatedAt)}${liveDateNote}</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="badge ${s.badge}">${s.label}</span>
+          <button class="delete-btn" title="Delete" onclick="event.stopPropagation(); deleteItem('${item.id}')">🗑</button>
+        </div>
+      </div>
+      ${showFeedback ? `<div class="card-feedback"><b>Feedback:</b> ${escapeHtml(lastFeedback.notes)}</div>` : ''}
+      ${liveLinkRow}
+    </div>
+  `;
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+
+function setRole(r){ role = r; activeFilter='all'; render(); }
+function setFilter(f){ activeFilter = f; render(); }
+
+async function saveLiveLink(id){
+  const val = document.getElementById('f-livelink').value.trim();
+  const item = board.find(i => i.id === id);
+  item.liveLink = val;
+  item.updatedAt = new Date().toISOString();
+  await saveBoard();
+  toast("Live link saved");
+  openDetail(id);
+}
+
+async function deleteItem(id){
+  const item = board.find(i => i.id === id);
+  if(!item) return;
+  const ok = confirm(`Delete "${item.title}"? This removes all its versions and feedback history and can't be undone.`);
+  if(!ok) return;
+  board = board.filter(i => i.id !== id);
+  closeOverlay();
+  render();
+  await saveBoard();
+  toast("Deleted");
+}
+
+function openOverlay(html){
+  document.getElementById('modalBody').innerHTML = html;
+  document.getElementById('overlay').classList.add('open');
+}
+function closeOverlay(){
+  document.getElementById('overlay').classList.remove('open');
+}
+document.getElementById('overlay').addEventListener('click', (e)=>{ if(e.target.id==='overlay') closeOverlay(); });
+
+function openSubmitModal(){
+  openOverlay(`
+    <h2>Submit content for review</h2>
+    <p class="sub">This goes straight into Ishika's queue.</p>
+    <label>Title</label>
+    <input type="text" id="f-title" placeholder="e.g. Reddit AMA teaser copy">
+    <label>Content type</label>
+    <select id="f-type">
+      <option>Reddit seeding copy</option>
+      <option>Comments</option>
+      <option>ORM comments</option>
+      <option>Other</option>
+    </select>
+    <label>Campaign</label>
+    <input type="text" id="f-campaign" placeholder="e.g. July hair loss push">
+    <label>Tentative live date</label>
+    <input type="date" id="f-livedate">
+    <label>Content (paste text or a link)</label>
+    <textarea id="f-content" placeholder="Paste the draft or a link to it"></textarea>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeOverlay()">Cancel</button>
+      <button class="btn-primary" onclick="submitContent()">Submit</button>
+    </div>
+  `);
+}
+
+async function submitContent(){
+  const title = document.getElementById('f-title').value.trim();
+  const type = document.getElementById('f-type').value;
+  const campaign = document.getElementById('f-campaign').value.trim();
+  const tentativeLiveDate = document.getElementById('f-livedate').value; // "" or "YYYY-MM-DD"
+  const content = document.getElementById('f-content').value.trim();
+  if(!title || !content){ toast("Add a title and the content first"); return; }
+  const now = new Date().toISOString();
+  const item = {
+    id: 'c' + Date.now(),
+    title, type, campaign, tentativeLiveDate,
+    status: 'submitted',
+    createdAt: now, updatedAt: now,
+    versions: [{n:1, content, submittedAt: now}],
+    feedback: [],
+    liveLink: ""
+  };
+  board.push(item);
+  render();
+  await saveBoard();
+  openNotifyReviewerModal(item);
+}
+
+function normalizeUrl(url){
+  const u = (url || "").trim();
+  if(!u) return "";
+  return /^https?:\/\//i.test(u) ? u : `https://${u}`;
+}
+
+function openNotifyReviewerModal(item, headingNote){
+  const hasEmail = !!settings.reviewerEmail;
+  const link = normalizeUrl(settings.dashboardUrl);
+  const hasLink = !!link;
+  const latest = item.versions[item.versions.length-1];
+  const liveDate = item.tentativeLiveDate ? fmtDateOnly(item.tentativeLiveDate) : "TBD";
+
+  // The dashboard link sits alone on its own line — Gmail (and virtually every mail client)
+  // auto-detects and hyperlinks a bare URL like this once the mail is actually sent. Gmail's
+  // compose-via-link only accepts plain text, so it can't be masked behind the word "here".
+  const body = `Hey Ishika,\n\nThis is supposed to go live at ${liveDate}\n\nPlease review\n\n${latest.content}\n\nReview it here:\n${hasLink ? link : '[dashboard link not set yet]'}\n\nBest regards,\nMemeta agency`;
+
+  const mailLink = hasEmail ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(settings.reviewerEmail)}&su=${encodeURIComponent('Please review: ' + item.title)}&body=${encodeURIComponent(body)}` : null;
+  openOverlay(`
+    <h2>Notify Ishika</h2>
+    <p class="sub">${headingNote || 'Let Ishika know'} about "${escapeHtml(item.title)}".</p>
+    <div class="copy-box">${escapeHtml(body)}</div>
+    ${(!hasEmail || !hasLink) ? `<p class="sub" style="color:var(--amber);margin-top:8px;">${!hasEmail ? "Reviewer's email hasn't been set up yet" : "Dashboard link hasn't been set up yet"} — ask Ishika to add it under "Notify settings" (visible in Reviewer view).</p>` : ''}
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeOverlay()">Skip</button>
+      ${mailLink ? `<button class="btn-primary" onclick="window.open('${mailLink}', '_blank'); closeOverlay();">Open in Gmail</button>` : ''}
+    </div>
+  `);
+}
+
+function openDetail(id){
+  const item = board.find(i => i.id === id);
+  if(!item) return;
+  const s = STAGES[item.status];
+  const latest = item.versions[item.versions.length-1];
+
+  const versionLog = item.versions.map(v => `<div class="version-item"><b>v${v.n}</b> submitted ${fmtDate(v.submittedAt)}</div>`).join('') +
+    item.feedback.map(f => `<div class="version-item"><b>Review on v${f.version}:</b> ${f.decision==='approve'?'Approved':'Revision requested'} — ${escapeHtml(f.notes)} <span style="opacity:.7">(${fmtDate(f.reviewedAt)})</span></div>`).join('');
+
+  let actionBlock = '';
+
+  if(role === 'reviewer' && (item.status === 'submitted' || item.status === 'resubmitted')){
+    actionBlock = `
+      <label>Your decision</label>
+      <div class="radio-row">
+        <div class="radio-opt sel-approve" id="opt-approve" onclick="selectDecision('approve')">Approve</div>
+        <div class="radio-opt sel-revise" id="opt-revise" onclick="selectDecision('revise')">Request revision</div>
+      </div>
+      <label>Notes</label>
+      <textarea id="f-notes" placeholder="What needs to change, or why this works"></textarea>
+      <div class="modal-actions">
+        <button class="btn-ghost" onclick="closeOverlay()">Close</button>
+        <button class="btn-primary" onclick="submitReview('${item.id}')">Submit review</button>
+      </div>
+    `;
+  } else if(role === 'agency'){
+    const isRevision = item.status === 'revision';
+    const isApproved = item.status === 'approved';
+    let heading = 'Edit content';
+    if(isRevision) heading = 'Revised content';
+    if(isApproved) heading = 'Edit approved content';
+    let btnLabel = 'Save changes';
+    if(isRevision) btnLabel = 'Resubmit';
+    if(isApproved) btnLabel = 'Save & send for re-review';
+    const liveLinkBlock = isApproved ? `
+      <label>Live link</label>
+      <input type="text" id="f-livelink" placeholder="https://... where this is now published" value="${escapeHtml(item.liveLink || '')}">
+      <div class="modal-actions" style="margin-top:8px;">
+        <button class="btn-primary" onclick="saveLiveLink('${item.id}')">Save live link</button>
+      </div>
+    ` : '';
+    actionBlock = `
+      ${liveLinkBlock}
+      <label style="margin-top:${isApproved?'20px':'0'};">${heading} (v${item.versions.length+1})</label>
+      <textarea id="f-revision">${escapeHtml(latest.content)}</textarea>
+      ${isApproved ? `<p class="sub" style="color:var(--amber);margin-top:6px;">This was already approved. Saving a change here moves it back to Resubmitted so it gets reviewed again.</p>` : ''}
+      <div class="modal-actions">
+        <button class="btn-ghost" onclick="closeOverlay()">Close</button>
+        <button class="btn-ghost" onclick="openNotifyReviewerModal(board.find(i=>i.id==='${item.id}'), 'Send an update')">✉️ Email Ishika</button>
+        <button class="btn-primary" onclick="resubmitContent('${item.id}')">${btnLabel}</button>
+      </div>
+    `;
+  } else if(item.status === 'approved'){
+    const live = item.liveLink
+      ? `<p class="sub" style="margin-top:8px;">Live at: <a href="${escapeHtml(item.liveLink)}" target="_blank" style="color:var(--accent);font-weight:700;">${escapeHtml(item.liveLink)}</a></p>`
+      : `<p class="sub" style="margin-top:8px;color:var(--amber);">Not live yet — the agency adds this link once it's published.</p>`;
+    actionBlock = `<div class="copy-box">Approved on ${fmtDate(item.feedback[item.feedback.length-1].reviewedAt)}. Ready to publish.</div>${live}`;
+  }
+
+  openOverlay(`
+    <h2>${escapeHtml(item.title)}</h2>
+    <p class="sub">${escapeHtml(item.type)} · ${escapeHtml(item.campaign)} · <span class="badge ${s.badge}">${s.label}</span>${item.tentativeLiveDate ? ` · tentative live: ${fmtDateOnly(item.tentativeLiveDate)}` : ''}</p>
+    <label>Current draft (v${latest.n})</label>
+    <div class="content-preview">${escapeHtml(latest.content)}</div>
+    ${actionBlock}
+    <div class="version-log">${versionLog}</div>
+    <div class="modal-actions" style="justify-content:flex-start;margin-top:10px;">
+      <button class="delete-btn" onclick="deleteItem('${item.id}')">🗑 Delete this item</button>
+    </div>
+  `);
+}
+
+let pendingDecision = null;
+function selectDecision(d){
+  pendingDecision = d;
+  document.getElementById('opt-approve').classList.toggle('on', d==='approve');
+  document.getElementById('opt-revise').classList.toggle('on', d==='revise');
+}
+
+async function submitReview(id){
+  const notes = document.getElementById('f-notes').value.trim();
+  if(!pendingDecision){ toast("Pick approve or request revision"); return; }
+  if(pendingDecision === 'revise' && !notes){ toast("Add a note so the agency knows what to fix"); return; }
+  const decision = pendingDecision; // capture before we reset it below
+  const item = board.find(i => i.id === id);
+  const now = new Date().toISOString();
+  item.feedback.push({decision, notes, version: item.versions.length, reviewedAt: now});
+  item.status = decision === 'approve' ? 'approved' : 'revision';
+  item.updatedAt = now;
+  pendingDecision = null;
+  await saveBoard();
+
+  const message = decision === 'approve'
+    ? `"${item.title}" is approved — please proceed.`
+    : `Hi — feedback on "${item.title}": ${notes}. Please revise and resubmit in the dashboard.`;
+  const subject = decision === 'approve' ? `Approved: ${item.title}` : `Revision needed: ${item.title}`;
+
+  const method = settings.contactType;
+  const phone = cleanPhone(settings.agencyPhone);
+  const waLink = (method === 'individual' && phone) ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}` : null;
+  const mailLink = (method === 'email' && settings.agencyEmail) ? `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(settings.agencyEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}` : null;
+
+  let helperNote = '';
+  if(method === 'group' && settings.groupName){
+    helperNote = `<p class="sub" style="margin-top:8px;">Copy this and paste it into <b>${escapeHtml(settings.groupName)}</b> — WhatsApp doesn't support pre-filling a message into a group.</p>`;
+  } else if(method === 'group'){
+    helperNote = `<p class="sub" style="color:var(--amber);margin-top:8px;">No group name saved yet — add one via "Agency contact" in the header, then copy the message below into that group.</p>`;
+  } else if(method === 'individual' && !phone){
+    helperNote = `<p class="sub" style="color:var(--amber);margin-top:8px;">No agency WhatsApp number saved yet — add one via "Agency contact" in the header, or copy the message below.</p>`;
+  } else if(method === 'email' && !settings.agencyEmail){
+    helperNote = `<p class="sub" style="color:var(--amber);margin-top:8px;">No agency email saved yet — add one via "Agency contact" in the header, or copy the message below.</p>`;
+  }
+
+  let actionBtn = '';
+  if(waLink) actionBtn = `<button class="btn-primary" onclick="window.open('${waLink}', '_blank')">Send via WhatsApp</button>`;
+  if(mailLink) actionBtn = `<button class="btn-primary" onclick="window.open('${mailLink}', '_blank')">Open in Gmail</button>`;
+
+  openOverlay(`
+    <h2>Review submitted</h2>
+    <p class="sub">Status updated to <b>${STAGES[item.status].label}</b>.</p>
+    <label>Message for the agency</label>
+    <div class="copy-box" id="msg-box">${escapeHtml(message)}</div>
+    ${helperNote}
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeOverlay()">Done</button>
+      <button class="btn-ghost" onclick="copyMessage()">Copy message</button>
+      ${actionBtn}
+    </div>
+  `);
+  render();
+}
+
+function copyMessage(){
+  const text = document.getElementById('msg-box').textContent;
+  navigator.clipboard.writeText(text).then(()=> toast("Copied to clipboard"));
+}
+
+async function resubmitContent(id){
+  const content = document.getElementById('f-revision').value.trim();
+  if(!content){ toast("Content can't be empty"); return; }
+  const item = board.find(i => i.id === id);
+  const shouldReflag = item.status === 'revision' || item.status === 'approved';
+  const now = new Date().toISOString();
+  item.versions.push({n: item.versions.length+1, content, submittedAt: now});
+  if(shouldReflag) item.status = 'resubmitted'; // send back into the queue if it was previously final or awaiting a fix
+  item.updatedAt = now;
+  render();
+  await saveBoard();
+  toast(shouldReflag ? "Sent back for re-review" : "Changes saved");
+  openNotifyReviewerModal(item, shouldReflag ? "Your revised draft is ready" : "This item was updated");
+}
+
+(async function init(){
+  await loadBoard();
+  await loadSettings();
+  render();
+})();
+</script>
+</body>
+</html>
