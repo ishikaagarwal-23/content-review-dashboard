@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Content Review — Man Matters</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --bg:#F6F7F4;
@@ -146,6 +147,9 @@ const STAGES = {
 };
 const BOARD_KEY = "review-board";
 const SETTINGS_KEY = "review-settings";
+const SUPABASE_URL = "https://ackougqmxonbjcebxrwz.supabase.co";
+const SUPABASE_KEY = "sb_publishable_zBrrO2KeCoScHNRlR1TPHQ_YTQpUqpM";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let role = "reviewer"; // "reviewer" (Ishika) or "agency"
 let board = [];
 let settings = { contactType: "individual", agencyPhone: "", groupName: "", agencyEmail: "", reviewerEmail: "", dashboardUrl: "" };
@@ -157,8 +161,9 @@ function cleanPhone(raw){
 
 async function loadSettings(){
   try{
-    const res = await window.storage.get(SETTINGS_KEY, true);
-    settings = res && res.value ? JSON.parse(res.value) : { contactType: "individual", agencyPhone: "", groupName: "", agencyEmail: "", reviewerEmail: "", dashboardUrl: "" };
+    const { data, error } = await sb.from('kv_store').select('value').eq('key', SETTINGS_KEY).maybeSingle();
+    if(error) throw error;
+    settings = data && data.value ? data.value : { contactType: "individual", agencyPhone: "", groupName: "", agencyEmail: "", reviewerEmail: "", dashboardUrl: "" };
   }catch(e){
     settings = { contactType: "individual", agencyPhone: "", groupName: "", agencyEmail: "", reviewerEmail: "", dashboardUrl: "" };
   }
@@ -166,7 +171,8 @@ async function loadSettings(){
 
 async function saveSettings(){
   try{
-    await window.storage.set(SETTINGS_KEY, JSON.stringify(settings), true);
+    const { error } = await sb.from('kv_store').upsert({ key: SETTINGS_KEY, value: settings, updated_at: new Date().toISOString() });
+    if(error) toast("Couldn't save settings: " + error.message);
   }catch(e){
     toast("Couldn't save settings: " + e.message);
   }
@@ -230,6 +236,8 @@ async function saveAgencyContact(){
 }
 
 function openReviewerSettingsModal(){
+  const link = normalizeUrl(settings.dashboardUrl);
+  const looksValid = link && /^https?:\/\/[^\s]+\.[^\s]{2,}/i.test(link);
   openOverlay(`
     <h2>Reviewer notify settings</h2>
     <p class="sub">Used when the agency sends you a "please review" email after submitting.</p>
@@ -237,7 +245,9 @@ function openReviewerSettingsModal(){
     <input type="text" id="f-revemail" placeholder="e.g. ishika@manmatters.com" value="${escapeHtml(settings.reviewerEmail)}">
     <label>Dashboard link</label>
     <input type="text" id="f-dashurl" placeholder="Paste this dashboard's shared link" value="${escapeHtml(settings.dashboardUrl)}">
+    ${link ? `<p class="sub" style="margin-top:8px;">Test it — click to confirm it actually opens your dashboard: <a href="${escapeHtml(link)}" target="_blank" style="color:var(--accent);font-weight:700;">${escapeHtml(link)}</a>${!looksValid ? '<br><span style="color:var(--rust);">This does not look like a complete URL — check for typos, spaces, or a missing domain.</span>' : ''}</p>` : ''}
     <p class="sub" style="margin-top:10px;">Opening this link always lands on Reviewer view by default, so the agency's email takes you straight into review mode.</p>
+    <p class="sub" style="margin-top:8px;color:var(--muted);">Note: in the compose draft itself, this link will look like plain text, not blue/underlined — that's normal. Gmail only auto-formats links you type or paste by hand, not text inserted this way. It still becomes a real clickable link once the email is sent and opened.</p>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeOverlay()">Cancel</button>
       <button class="btn-primary" onclick="saveReviewerSettings()">Save</button>
@@ -262,8 +272,9 @@ function toast(msg){
 
 async function loadBoard(){
   try{
-    const res = await window.storage.get(BOARD_KEY, true);
-    board = res && res.value ? JSON.parse(res.value) : [];
+    const { data, error } = await sb.from('kv_store').select('value').eq('key', BOARD_KEY).maybeSingle();
+    if(error) throw error;
+    board = data && data.value ? data.value : [];
   }catch(e){
     board = [];
   }
@@ -271,8 +282,8 @@ async function loadBoard(){
 
 async function saveBoard(){
   try{
-    const result = await window.storage.set(BOARD_KEY, JSON.stringify(board), true);
-    if(!result) toast("Couldn't save — try again");
+    const { error } = await sb.from('kv_store').upsert({ key: BOARD_KEY, value: board, updated_at: new Date().toISOString() });
+    if(error) toast("Couldn't save — try again");
   }catch(e){
     toast("Save failed: " + e.message);
   }
