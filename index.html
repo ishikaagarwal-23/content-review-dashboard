@@ -21,6 +21,8 @@
     --slate-soft:#EEEEF0;
     --rust:#B0472E;
     --rust-soft:#F7E7E3;
+    --live:#7C3AED;
+    --live-soft:#EFE7FC;
     --radius:10px;
     --shadow:0 1px 2px rgba(22,33,62,0.06), 0 4px 14px rgba(22,33,62,0.05);
   }
@@ -63,6 +65,7 @@
   .rail-stage.dot-revision .rail-count{color:var(--amber);}
   .rail-stage.dot-resubmitted .rail-count{color:var(--blue);}
   .rail-stage.dot-approved .rail-count{color:var(--accent);}
+  .rail-stage.dot-live .rail-count{color:var(--live);}
 
   /* toolbar */
   .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;}
@@ -93,6 +96,7 @@
   .badge-revision{background:var(--amber-soft);color:var(--amber);}
   .badge-resubmitted{background:var(--blue-soft);color:var(--blue);}
   .badge-approved{background:var(--accent-soft);color:var(--accent);}
+  .badge-live{background:var(--live-soft);color:var(--live);}
   .card-feedback{margin-top:10px;font-size:13px;color:var(--ink);background:var(--amber-soft);border-left:3px solid var(--amber);padding:8px 10px;border-radius:4px;}
   .delete-btn{background:transparent;border:1px solid var(--line);border-radius:6px;font-size:13px;padding:4px 8px;cursor:pointer;color:var(--muted);line-height:1;}
   .delete-btn:hover{border-color:var(--rust);color:var(--rust);background:var(--rust-soft);}
@@ -144,6 +148,7 @@ const STAGES = {
   revision: {label:"Revision Requested", badge:"badge-revision", dot:"dot-revision"},
   resubmitted: {label:"Resubmitted", badge:"badge-resubmitted", dot:"dot-resubmitted"},
   approved: {label:"Approved", badge:"badge-approved", dot:"dot-approved"},
+  live: {label:"Live", badge:"badge-live", dot:"dot-live"},
 };
 const BOARD_KEY = "review-board";
 const SETTINGS_KEY = "review-settings";
@@ -301,7 +306,7 @@ function fmtDateOnly(dateStr){
 }
 
 function counts(){
-  const c = {submitted:0, revision:0, resubmitted:0, approved:0};
+  const c = {submitted:0, revision:0, resubmitted:0, approved:0, live:0};
   board.forEach(i => { if(c[i.status] !== undefined) c[i.status]++; });
   return c;
 }
@@ -310,8 +315,8 @@ function render(){
   const app = document.getElementById('app');
   const c = counts();
   const filters = role === 'reviewer'
-    ? [['all','All'],['submitted','Needs Review'],['resubmitted','Resubmitted'],['approved','Approved']]
-    : [['all','All'],['revision','Needs Your Revision'],['submitted','In Review'],['approved','Approved']];
+    ? [['all','All'],['submitted','Needs Review'],['resubmitted','Resubmitted'],['approved','Approved'],['live','Live']]
+    : [['all','All'],['revision','Needs Your Revision'],['submitted','In Review'],['approved','Approved'],['live','Live']];
 
   let list = board.slice().sort((a,b)=> new Date(b.updatedAt)-new Date(a.updatedAt));
   if(activeFilter !== 'all') list = list.filter(i => i.status === activeFilter);
@@ -335,6 +340,7 @@ function render(){
       <div class="rail-stage dot-revision"><div class="rail-count">${c.revision}</div><div class="rail-label">Revision Requested</div></div>
       <div class="rail-stage dot-resubmitted"><div class="rail-count">${c.resubmitted}</div><div class="rail-label">Resubmitted</div></div>
       <div class="rail-stage dot-approved"><div class="rail-count">${c.approved}</div><div class="rail-label">Approved</div></div>
+      <div class="rail-stage dot-live"><div class="rail-count">${c.live}</div><div class="rail-label">Live</div></div>
     </div>
 
     <div class="toolbar">
@@ -355,15 +361,18 @@ function cardHTML(item){
   const lastFeedback = item.feedback[item.feedback.length-1];
   const showFeedback = item.status === 'revision' && lastFeedback;
   const liveDateNote = item.tentativeLiveDate ? ` · live ${fmtDateOnly(item.tentativeLiveDate)}` : '';
+  const subredditNote = item.subreddit ? ` · ${escapeHtml(item.subreddit)}` : '';
+  const hasMetrics = item.views != null || item.upvotes != null || item.comments != null;
+  const metricsNote = hasMetrics ? ` · 👁 ${item.views ?? 0} · ⬆ ${item.upvotes ?? 0} · 💬 ${item.comments ?? 0}` : '';
   const liveLinkRow = item.liveLink
-    ? `<div class="card-feedback" style="background:var(--accent-soft);border-left-color:var(--accent);"><b>Live:</b> <a href="${escapeHtml(item.liveLink)}" target="_blank" onclick="event.stopPropagation();" style="color:var(--accent);">${escapeHtml(item.liveLink)}</a></div>`
+    ? `<div class="card-feedback" style="background:var(--live-soft);border-left-color:var(--live);"><b>Live:</b> <a href="${escapeHtml(item.liveLink)}" target="_blank" onclick="event.stopPropagation();" style="color:var(--live);">${escapeHtml(item.liveLink)}</a>${metricsNote}</div>`
     : '';
   return `
     <div class="card" onclick="openDetail('${item.id}')">
       <div class="card-top">
         <div>
           <p class="card-title">${escapeHtml(item.title)}</p>
-          <p class="card-meta">${escapeHtml(item.type)} · ${escapeHtml(item.campaign)} · v${item.versions.length} · updated ${fmtDate(item.updatedAt)}${liveDateNote}</p>
+          <p class="card-meta">${escapeHtml(item.type)}${subredditNote} · ${escapeHtml(item.campaign)} · v${item.versions.length} · updated ${fmtDate(item.updatedAt)}${liveDateNote}</p>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="badge ${s.badge}">${s.label}</span>
@@ -385,13 +394,33 @@ function escapeHtml(str){
 function setRole(r){ role = r; activeFilter='all'; render(); }
 function setFilter(f){ activeFilter = f; render(); }
 
-async function saveLiveLink(id){
+async function markLive(id){
   const val = document.getElementById('f-livelink').value.trim();
+  if(!val){ toast("Add the live link first"); return; }
   const item = board.find(i => i.id === id);
   item.liveLink = val;
+  item.status = 'live';
   item.updatedAt = new Date().toISOString();
+  render();
   await saveBoard();
-  toast("Live link saved");
+  toast("Marked as Live 🔴");
+  openDetail(id);
+}
+
+async function saveLiveMetrics(id){
+  const item = board.find(i => i.id === id);
+  const link = document.getElementById('f-livelink').value.trim();
+  const views = document.getElementById('f-views').value.trim();
+  const upvotes = document.getElementById('f-upvotes').value.trim();
+  const comments = document.getElementById('f-comments').value.trim();
+  item.liveLink = link;
+  item.views = views === '' ? null : Number(views);
+  item.upvotes = upvotes === '' ? null : Number(upvotes);
+  item.comments = comments === '' ? null : Number(comments);
+  item.updatedAt = new Date().toISOString();
+  render();
+  await saveBoard();
+  toast("Updated");
   openDetail(id);
 }
 
@@ -429,6 +458,8 @@ function openSubmitModal(){
       <option>ORM comments</option>
       <option>Other</option>
     </select>
+    <label>Subreddit</label>
+    <input type="text" id="f-subreddit" placeholder="e.g. r/indianhaircare">
     <label>Campaign</label>
     <input type="text" id="f-campaign" placeholder="e.g. July hair loss push">
     <label>Tentative live date</label>
@@ -445,6 +476,7 @@ function openSubmitModal(){
 async function submitContent(){
   const title = document.getElementById('f-title').value.trim();
   const type = document.getElementById('f-type').value;
+  const subreddit = document.getElementById('f-subreddit').value.trim();
   const campaign = document.getElementById('f-campaign').value.trim();
   const tentativeLiveDate = document.getElementById('f-livedate').value; // "" or "YYYY-MM-DD"
   const content = document.getElementById('f-content').value.trim();
@@ -452,12 +484,13 @@ async function submitContent(){
   const now = new Date().toISOString();
   const item = {
     id: 'c' + Date.now(),
-    title, type, campaign, tentativeLiveDate,
+    title, type, subreddit, campaign, tentativeLiveDate,
     status: 'submitted',
     createdAt: now, updatedAt: now,
     versions: [{n:1, content, submittedAt: now}],
     feedback: [],
-    liveLink: ""
+    liveLink: "",
+    views: null, upvotes: null, comments: null
   };
   board.push(item);
   render();
@@ -524,24 +557,52 @@ function openDetail(id){
   } else if(role === 'agency'){
     const isRevision = item.status === 'revision';
     const isApproved = item.status === 'approved';
+    const isLive = item.status === 'live';
     let heading = 'Edit content';
     if(isRevision) heading = 'Revised content';
-    if(isApproved) heading = 'Edit approved content';
+    if(isApproved || isLive) heading = 'Edit approved content';
     let btnLabel = 'Save changes';
     if(isRevision) btnLabel = 'Resubmit';
-    if(isApproved) btnLabel = 'Save & send for re-review';
-    const liveLinkBlock = isApproved ? `
-      <label>Live link</label>
-      <input type="text" id="f-livelink" placeholder="https://... where this is now published" value="${escapeHtml(item.liveLink || '')}">
-      <div class="modal-actions" style="margin-top:8px;">
-        <button class="btn-primary" onclick="saveLiveLink('${item.id}')">Save live link</button>
-      </div>
-    ` : '';
+    if(isApproved || isLive) btnLabel = 'Save & send for re-review';
+
+    let liveLinkBlock = '';
+    if(isApproved){
+      liveLinkBlock = `
+        <label>Live link</label>
+        <input type="text" id="f-livelink" placeholder="https://... where this is now published" value="${escapeHtml(item.liveLink || '')}">
+        <div class="modal-actions" style="margin-top:8px;">
+          <button class="btn-primary" onclick="markLive('${item.id}')">Mark as Live</button>
+        </div>
+      `;
+    } else if(isLive){
+      liveLinkBlock = `
+        <label>Live link</label>
+        <input type="text" id="f-livelink" placeholder="https://... where this is now published" value="${escapeHtml(item.liveLink || '')}">
+        <div style="display:flex;gap:10px;margin-top:12px;">
+          <div style="flex:1;">
+            <label>Views</label>
+            <input type="number" id="f-views" placeholder="0" value="${item.views ?? ''}">
+          </div>
+          <div style="flex:1;">
+            <label>Upvotes</label>
+            <input type="number" id="f-upvotes" placeholder="0" value="${item.upvotes ?? ''}">
+          </div>
+          <div style="flex:1;">
+            <label>Comments</label>
+            <input type="number" id="f-comments" placeholder="0" value="${item.comments ?? ''}">
+          </div>
+        </div>
+        <div class="modal-actions" style="margin-top:8px;">
+          <button class="btn-primary" onclick="saveLiveMetrics('${item.id}')">Update</button>
+        </div>
+      `;
+    }
+
     actionBlock = `
       ${liveLinkBlock}
-      <label style="margin-top:${isApproved?'20px':'0'};">${heading} (v${item.versions.length+1})</label>
+      <label style="margin-top:${(isApproved||isLive)?'20px':'0'};">${heading} (v${item.versions.length+1})</label>
       <textarea id="f-revision">${escapeHtml(latest.content)}</textarea>
-      ${isApproved ? `<p class="sub" style="color:var(--amber);margin-top:6px;">This was already approved. Saving a change here moves it back to Resubmitted so it gets reviewed again.</p>` : ''}
+      ${(isApproved||isLive) ? `<p class="sub" style="color:var(--amber);margin-top:6px;">This was already ${isLive?'published':'approved'}. Saving a change here moves it back to Resubmitted so it gets reviewed again.</p>` : ''}
       <div class="modal-actions">
         <button class="btn-ghost" onclick="closeOverlay()">Close</button>
         <button class="btn-ghost" onclick="openNotifyReviewerModal(board.find(i=>i.id==='${item.id}'), 'Send an update')">✉️ Email Ishika</button>
@@ -549,15 +610,16 @@ function openDetail(id){
       </div>
     `;
   } else if(item.status === 'approved'){
-    const live = item.liveLink
-      ? `<p class="sub" style="margin-top:8px;">Live at: <a href="${escapeHtml(item.liveLink)}" target="_blank" style="color:var(--accent);font-weight:700;">${escapeHtml(item.liveLink)}</a></p>`
-      : `<p class="sub" style="margin-top:8px;color:var(--amber);">Not live yet — the agency adds this link once it's published.</p>`;
-    actionBlock = `<div class="copy-box">Approved on ${fmtDate(item.feedback[item.feedback.length-1].reviewedAt)}. Ready to publish.</div>${live}`;
+    actionBlock = `<div class="copy-box">Approved on ${fmtDate(item.feedback[item.feedback.length-1].reviewedAt)}. Ready to publish.</div><p class="sub" style="margin-top:8px;color:var(--amber);">Not live yet — the agency adds the live link once it's published.</p>`;
+  } else if(item.status === 'live'){
+    const hasMetrics = item.views != null || item.upvotes != null || item.comments != null;
+    const metricsLine = hasMetrics ? `<p class="sub" style="margin-top:8px;">👁 ${item.views ?? 0} views · ⬆ ${item.upvotes ?? 0} upvotes · 💬 ${item.comments ?? 0} comments</p>` : `<p class="sub" style="margin-top:8px;color:var(--muted);">No engagement numbers added yet.</p>`;
+    actionBlock = `<div class="copy-box" style="background:var(--live-soft);">🔴 Live${item.liveLink ? ` at: <a href="${escapeHtml(item.liveLink)}" target="_blank" style="color:var(--live);font-weight:700;">${escapeHtml(item.liveLink)}</a>` : ' (link not added yet)'}</div>${metricsLine}`;
   }
 
   openOverlay(`
     <h2>${escapeHtml(item.title)}</h2>
-    <p class="sub">${escapeHtml(item.type)} · ${escapeHtml(item.campaign)} · <span class="badge ${s.badge}">${s.label}</span>${item.tentativeLiveDate ? ` · tentative live: ${fmtDateOnly(item.tentativeLiveDate)}` : ''}</p>
+    <p class="sub">${escapeHtml(item.type)}${item.subreddit ? ' · ' + escapeHtml(item.subreddit) : ''} · ${escapeHtml(item.campaign)} · <span class="badge ${s.badge}">${s.label}</span>${item.tentativeLiveDate ? ` · tentative live: ${fmtDateOnly(item.tentativeLiveDate)}` : ''}</p>
     <label>Current draft (v${latest.n})</label>
     <div class="content-preview">${escapeHtml(latest.content)}</div>
     ${actionBlock}
@@ -637,7 +699,7 @@ async function resubmitContent(id){
   const content = document.getElementById('f-revision').value.trim();
   if(!content){ toast("Content can't be empty"); return; }
   const item = board.find(i => i.id === id);
-  const shouldReflag = item.status === 'revision' || item.status === 'approved';
+  const shouldReflag = item.status === 'revision' || item.status === 'approved' || item.status === 'live';
   const now = new Date().toISOString();
   item.versions.push({n: item.versions.length+1, content, submittedAt: now});
   if(shouldReflag) item.status = 'resubmitted'; // send back into the queue if it was previously final or awaiting a fix
